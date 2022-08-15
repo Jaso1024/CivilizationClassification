@@ -12,7 +12,12 @@ class tester(unittest.TestCase):
         self.assertFalse(self.scraper.is_link("www/google.com"))
 
     def test_format_urls(self):
-
         self.scraper.format_urls()
+    
+    def test_scrape_training(self):
+        self.scraper.format_urls()
+        self.scraper.scrape_training()
+
+    
 
 unittest.main()
