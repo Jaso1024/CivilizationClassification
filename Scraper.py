@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 import re
+import string
 
 class Scraper:
     def __init__(self) -> None:
@@ -22,27 +23,45 @@ class Scraper:
                         content += text
 
                 content = self.format_data(content)
+                self.trainingdata[empire].extend(content)
+        
 
-
-                return content
 
 
     def scrape_testing(self):
         pass
 
-    def remove_phrases(self, content):
+    def contains_removal_phrases(self, content):
         content = content.lower()
         with open("Resources/Data/Removalphrases.txt", "r") as file:
             file = [line.strip().replace("\n", "") for line in file.readlines()]
             for line in file:
-                print(line, line.lower() in content)
-                content = re.sub(line.lower(), " ", content)
+                if re.search(line.lower(), content) == None:
+                    continue
+                else:
+                    return True
+            return False
+
+
+    def remove_insignificant_sentences(self, content):
+        content = re.split("\. (?=([A-Za-z]))", content)
+        for idx in range(len(content)-1, -1, -1):
+            sentence = content[idx].strip()
+            sentence = re.sub(re.compile("\s"), " ", sentence)
+            if len(sentence.split(" ")) <= 7:
+                content.pop(idx)
+            elif sentence[0] not in string.ascii_uppercase and sentence[1] not in string.ascii_uppercase:
+                content.pop(idx)
+            elif self.contains_removal_phrases(sentence):
+                content.pop(idx)
+
         return content
-        
+                
+
     def format_data(self, content):
         content = re.sub("  +", " ", content)
         content = re.sub("\n", " ", content)
-        content = self.remove_phrases(content)
+        content = self.remove_insignificant_sentences(content)
         return content
 
     def to_csv(self, filename):
