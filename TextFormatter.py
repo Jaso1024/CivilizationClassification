@@ -1,7 +1,7 @@
+from nltk.stem import WordNetLemmatizer
 import nltk
 import re
 import contractions
-
 
 class Formatter:
     def __init__(self):
@@ -11,9 +11,6 @@ class Formatter:
 
         self.set_empires()
         self.get_training()
-        for line in self.training["Roman"]:
-            print(line)
-            print('-----------------------------')
 
     def clean_whitespace(self, line):
         line = line.strip()
@@ -45,7 +42,8 @@ class Formatter:
 
                 for sentence in line:
                     sentence = self.format_sentence(sentence, current_empire)
-                    self.training[current_empire].append(sentence)
+                    if sentence is not None:
+                        self.training[current_empire].extend([sentence])
 
     def format_sentence(self, sentence, current_empire):
         if len(sentence.replace(" ","")) > 15:
@@ -74,13 +72,36 @@ class Formatter:
                 self.testing[empire] = []
                 self.empires.append(empire)
     
-    def preprocess_text(self):
-        pass
+    def get_wordnet_pos(self, treebank_tag):
+        if treebank_tag.startswith('J'):
+            return nltk.corpus.wordnet.ADJ
+        elif treebank_tag.startswith('V'):
+            return nltk.corpus.wordnet.VERB
+        elif treebank_tag.startswith('N'):
+            return nltk.corpus.wordnet.NOUN
+        elif treebank_tag.startswith('R'):
+            return nltk.corpus.wordnet.ADV
+        else:
+            return nltk.corpus.wordnet.NOUN
+
+    def preprocess_training(self):
+        data = {}
+        for empire in self.empires:
+            text = []
+            for sentence in self.training[empire]:
+                wnl = WordNetLemmatizer()
+                print(sentence)
+                sentence = nltk.word_tokenize(sentence)
+                sentence = nltk.pos_tag(sentence)
+                sentence = [wnl.lemmatize(word, self.get_wordnet_pos(pos)) for word, pos in sentence]
+                text.append(sentence)
+            data[empire] = text
+        return data
+                
 
 
 if __name__ == "__main__":
     formatter = Formatter()
-    formatter.set_empires()
-    formatter.get_training()
+    formatter.preprocess_training()
                 
 
