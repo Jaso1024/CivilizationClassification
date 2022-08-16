@@ -10,8 +10,12 @@ class Formatter:
         self.training = {}
         self.empires = []
         self.testing = {}
+        self.vectorizer = CountVectorizer()
 
         self.set_empires()
+        self.make_training()
+        self.make_testing()
+        self.fit_vectorizer()
 
     def make_testing(self):
         with open("Resources/Data/testing.txt", "r", encoding="utf8") as file:
@@ -96,10 +100,16 @@ class Formatter:
             return nltk.corpus.wordnet.NOUN
 
     def preprocess_training(self):
+        return self.preprocess_data(self.training)
+
+    def preprocess_testing(self):
+        return self.preprocess_data(self.testing)
+
+    def preprocess_data(self, data):
         text = []
         labels = []
         for empire in self.empires:
-            for sentence in self.training[empire]:
+            for sentence in data[empire]:
                 wnl = WordNetLemmatizer()
                 sentence = nltk.word_tokenize(sentence)
                 sentence = nltk.pos_tag(sentence)
@@ -111,22 +121,30 @@ class Formatter:
 
         return text, labels
 
+    def fit_vectorizer(self):
+        text = list()
+        for empire in self.empires:
+            text.extend(self.training[empire])
+            text.extend(self.testing[empire])
+        self.vectorizer.fit(text)
+
     def get_training(self):
-        self.make_training()
         return self.preprocess_training()
     
+    def get_testing(self):
+        return self.preprocess_testing()
+    
     def vectorize(self, data):
-        vectorizer = CountVectorizer()
         dataset = []
         for sentence in data:
             dataset.append(" ".join(sentence))
-        data = vectorizer.fit_transform(dataset)
+        data = self.vectorizer.transform(dataset)
         return data
                 
 
 
 if __name__ == "__main__":
     formatter = Formatter()
-    formatter.preprocess_training()
+    formatter.fit_vectorizer()
                 
 
