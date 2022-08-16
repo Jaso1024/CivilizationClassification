@@ -2,6 +2,8 @@ from nltk.stem import WordNetLemmatizer
 import nltk
 import re
 import contractions
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
+import numpy as np
 
 class Formatter:
     def __init__(self):
@@ -10,7 +12,10 @@ class Formatter:
         self.testing = {}
 
         self.set_empires()
-        self.get_training()
+
+    def make_testing(self):
+        with open("Resources/Data/testing.txt", "r", encoding="utf8") as file:
+            self.make_dataset(file, testing=True)
 
     def clean_whitespace(self, line):
         line = line.strip()
@@ -23,27 +28,33 @@ class Formatter:
         line = line.replace("D.", "D")
         return line
 
-    def get_training(self):
-        with open("Resources/Data/Training.txt", "r", encoding="utf8") as file:
-            current_empire = None
-            for line in file.readlines()[1:]:
-                line = self.clean_whitespace(line)
-                line = self.fix_era(line)
+    def make_dataset(self, file, testing=False):
+        current_empire = None
+        for line in file.readlines()[1:]:
+            line = self.clean_whitespace(line)
+            line = self.fix_era(line)
 
-                if line in self.empires:
-                    current_empire = line
-                    continue
-                elif len(line) < 7 or "source" in "".join(line).lower():
-                    continue
-                elif line[-1] != ".":
-                    line += "."
+            if line in self.empires:
+                current_empire = line
+                continue
+            elif len(line) < 7 or "source" in "".join(line).lower():
+                continue
+            elif line[-1] != ".":
+                line += "."
 
-                line = nltk.sent_tokenize(line)
+            line = nltk.sent_tokenize(line)
 
-                for sentence in line:
-                    sentence = self.format_sentence(sentence, current_empire)
-                    if sentence is not None:
+            for sentence in line:
+                sentence = self.format_sentence(sentence, current_empire)
+                if sentence is not None:
+                    if testing:
+                        self.testing[current_empire].extend([sentence])
+                    else:
                         self.training[current_empire].extend([sentence])
+
+    def make_training(self):
+        with open("Resources/Data/Training.txt", "r", encoding="utf8") as file:
+            self.make_dataset(file)
 
     def format_sentence(self, sentence, current_empire):
         if len(sentence.replace(" ","")) > 15:
@@ -85,17 +96,31 @@ class Formatter:
             return nltk.corpus.wordnet.NOUN
 
     def preprocess_training(self):
-        data = {}
+        text = []
+        labels = []
         for empire in self.empires:
-            text = []
             for sentence in self.training[empire]:
                 wnl = WordNetLemmatizer()
-                print(sentence)
                 sentence = nltk.word_tokenize(sentence)
                 sentence = nltk.pos_tag(sentence)
                 sentence = [wnl.lemmatize(word, self.get_wordnet_pos(pos)) for word, pos in sentence]
                 text.append(sentence)
-            data[empire] = text
+                label = np.zeros(len(self.empires))
+                label[self.empires.index(empire)] = 1
+                labels.append(label)
+
+        return text, labels
+
+    def get_training(self):
+        self.make_training()
+        return self.preprocess_training()
+    
+    def vectorize(self, data):
+        vectorizer = CountVectorizer()
+        dataset = []
+        for sentence in data:
+            dataset.append(" ".join(sentence))
+        data = vectorizer.fit_transform(dataset)
         return data
                 
 
