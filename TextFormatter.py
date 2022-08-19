@@ -4,22 +4,19 @@ import re
 import contractions
 from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 import numpy as np
+from keras.preprocessing.text import one_hot
+from keras.utils import pad_sequences
 
 class Formatter:
     def __init__(self):
-        self.training = {}
+        self.data = {}
         self.empires = []
-        self.testing = {}
         self.vectorizer = CountVectorizer()
 
         self.set_empires()
-        self.make_training()
-        self.make_testing()
+        with open("Resources/Data/EmpireText.txt", "r", encoding="utf8") as file: 
+            self.make_dataset(file)
         self.fit_vectorizer()
-
-    def make_testing(self):
-        with open("Resources/Data/testing.txt", "r", encoding="utf8") as file:
-            self.make_dataset(file, testing=True)
 
     def clean_whitespace(self, line):
         line = line.strip()
@@ -32,10 +29,15 @@ class Formatter:
         line = line.replace("D.", "D")
         return line
 
-    def make_dataset(self, file, testing=False):
+    def remove_citings(self, line):
+        return re.sub("\[\d+\]", "", line)
+    
+
+    def make_dataset(self, file):
         current_empire = None
         for line in file.readlines()[1:]:
             line = self.clean_whitespace(line)
+            line = self.remove_citings(line)
             line = self.fix_era(line)
 
             if line in self.empires:
@@ -51,17 +53,10 @@ class Formatter:
             for sentence in line:
                 sentence = self.format_sentence(sentence, current_empire)
                 if sentence is not None:
-                    if testing:
-                        self.testing[current_empire].extend([sentence])
-                    else:
-                        self.training[current_empire].extend([sentence])
-
-    def make_training(self):
-        with open("Resources/Data/Training.txt", "r", encoding="utf8") as file:
-            self.make_dataset(file)
+                    self.data[current_empire].extend([sentence])
 
     def format_sentence(self, sentence, current_empire):
-        if len(sentence.replace(" ","")) > 15:
+        if len(sentence.replace(" ","")) > 7:
             sentence = contractions.fix(sentence)
             contains_other_empire = False
             for empire in self.empires:
@@ -80,11 +75,11 @@ class Formatter:
         return True
         
     def set_empires(self):
-        with open("Resources/Data/Training.txt", "r", encoding="utf8") as file:
-            empires = file.readline().split(" ")
+        with open("Resources/Data/EmpireText.txt", "r", encoding="utf8") as file:
+            empires = file.readline().replace("\n", "").split(" ")
+
             for empire in empires:
-                self.training[empire] = []
-                self.testing[empire] = []
+                self.data[empire] = []
                 self.empires.append(empire)
     
     def get_wordnet_pos(self, treebank_tag):
@@ -98,18 +93,28 @@ class Formatter:
             return nltk.corpus.wordnet.ADV
         else:
             return nltk.corpus.wordnet.NOUN
+    
+    def limit_length(self):
+        import random
+        max_len = float('inf')
+        for empire in self.empires:
+            max_len = len(self.data[empire]) if len(self.data[empire]) < max_len else max_len
+            print(max_len, empire)
+        print("maxlen", max_len)
+        for empire in self.empires:
+            new_data = []
+            for num in range(max_len):
+                index = np.random.randint(0,len(self.data[empire]))
+                new_data.append(self.data[empire][index])
+            self.data[empire] = new_data
 
-    def preprocess_training(self):
-        return self.preprocess_data(self.training)
 
-    def preprocess_testing(self):
-        return self.preprocess_data(self.testing)
-
-    def preprocess_data(self, data):
+    def preprocess_data(self):
         text = []
         labels = []
+        self.limit_length()
         for empire in self.empires:
-            for sentence in data[empire]:
+            for sentence in self.data[empire]:
                 wnl = WordNetLemmatizer()
                 sentence = nltk.word_tokenize(sentence)
                 sentence = nltk.pos_tag(sentence)
@@ -124,16 +129,20 @@ class Formatter:
     def fit_vectorizer(self):
         text = list()
         for empire in self.empires:
-            text.extend(self.training[empire])
-            text.extend(self.testing[empire])
+            text.extend(self.data[empire])
         self.vectorizer.fit(text)
 
-    def get_training(self):
-        return self.preprocess_training()
+    def get_data(self):
+        return self.preprocess_data()
     
-    def get_testing(self):
-        return self.preprocess_testing()
-    
+    def get_unique_words(self, data):
+        unique_words = set()
+        print("len", len(data))
+        for sentence in data:
+                for word in sentence:
+                    unique_words.add(word)
+        return len(unique_words)
+
     def vectorize(self, data):
         dataset = []
         for sentence in data:
@@ -141,10 +150,25 @@ class Formatter:
         data = self.vectorizer.transform(dataset)
         return data
                 
+    def linear_encode(self, labels):
+        decoded_labels = []
+        for label in labels:
+            decoded_labels.append(list(np.array(label).flatten()).index(1))
+        return decoded_labels
+    
+    def tensorflow_format_text(self, data, num_uniques):
+        max_len = 0
+        for sentence in data:
+            max_len = len(sentence) if len(sentence) > max_len else max_len
+        encoded_sentences = [one_hot(" ".join(sentence), num_uniques) for sentence in data]
+        padded_sequences = pad_sequences(encoded_sentences, maxlen=max_len, padding='post')        
+        return padded_sequences, max_len
 
+    
 
 if __name__ == "__main__":
     formatter = Formatter()
-    formatter.fit_vectorizer()
+    print(len(formatter.data["British"]))
+    #print(formatter.remove_citings("[250] Independence had been delayedefore it had an emperor.[8][9][10][11] T"))
                 
 
