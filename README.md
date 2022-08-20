@@ -1,3 +1,8 @@
 # EmpireClassification
-Ensemble Learning to classify empires
-Empires: Roman, Byzantine, Ottoman, Song, British
+Ensemble Learning to classify Civilazations such as:
+
+-The Roman Empire
+
+-The Ottoman Empire
+
+-Nazi Germany
