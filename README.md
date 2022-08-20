@@ -6,3 +6,5 @@ Ensemble Learning to classify Civilazations such as:
 -The Ottoman Empire
 
 -Nazi Germany
+
+-The Spanish Empire
