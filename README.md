@@ -1,10 +1,4 @@
 # EmpireClassification
-Ensemble Learning to classify Civilazations such as:
+Ensemble Learning to classify text into one of four empires.
 
--The Roman Empire
-
--The Ottoman Empire
-
--Nazi Germany
-
--The Spanish Empire
+Empires: Roman, Ottoman, Spanish, and Russian.
