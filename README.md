@@ -1,4 +1,4 @@
-# CIvilizationClassification
+# EmpireClassification
 Ensemble Learning to classify Civilazations such as:
 
 -The Roman Empire
