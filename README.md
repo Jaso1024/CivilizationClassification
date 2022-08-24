@@ -1,3 +1,4 @@
 # EmpireClassification
-Ensemble Learning to classify empires
-Empires: Roman, Byzantine, Ottoman, Song, British
+Ensemble Learning to classify text into one of four empires.
+
+Empires: Roman, Ottoman, Spanish, and Russian.
