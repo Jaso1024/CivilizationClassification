@@ -6,12 +6,15 @@ from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 import numpy as np
 from keras.preprocessing.text import one_hot
 from keras.utils import pad_sequences
+from nltk.corpus import stopwords
 
 class Formatter:
-    def __init__(self):
+    def __init__(self,min_sentence_length=5, level_sample_sizes=True):
         self.data = {}
         self.empires = []
         self.vectorizer = CountVectorizer()
+        self.min_sent_len = min_sentence_length
+        self.level_sample_sizes = level_sample_sizes
 
         self.set_empires()
         with open("Resources/Data/EmpireText.txt", "r", encoding="utf8") as file: 
@@ -30,7 +33,7 @@ class Formatter:
         return line
 
     def remove_citings(self, line):
-        return re.sub("\[\d+\]", "", line)
+        return re.sub("\[.{0,4}]", "", line)
     
 
     def make_dataset(self, file):
@@ -56,7 +59,7 @@ class Formatter:
                     self.data[current_empire].extend([sentence])
 
     def format_sentence(self, sentence, current_empire):
-        if len(sentence.replace(" ","")) > 7:
+        if len(sentence.split(" ")) > self.min_sent_len:
             sentence = contractions.fix(sentence)
             contains_other_empire = False
             for empire in self.empires:
@@ -65,7 +68,7 @@ class Formatter:
                 elif re.search(empire.lower(), sentence.lower()) is not None:
                     contains_other_empire = True
 
-            if not contains_other_empire and self.fix_semicolons(sentence, current_empire):
+            if not contains_other_empire:
                 return sentence.strip()
     
     def fix_semicolons(self, sentence, current_empire):
@@ -99,8 +102,7 @@ class Formatter:
         max_len = float('inf')
         for empire in self.empires:
             max_len = len(self.data[empire]) if len(self.data[empire]) < max_len else max_len
-            print(max_len, empire)
-        print("maxlen", max_len)
+        
         for empire in self.empires:
             new_data = []
             for num in range(max_len):
@@ -110,13 +112,16 @@ class Formatter:
 
 
     def preprocess_data(self):
+        #stop_words = set(stopwords.words('english'))
         text = []
         labels = []
-        self.limit_length()
+        #if self.level_sample_sizes:
+            #self.limit_length()
         for empire in self.empires:
             for sentence in self.data[empire]:
                 wnl = WordNetLemmatizer()
                 sentence = nltk.word_tokenize(sentence)
+                #sentence = [w for w in sentence if not w.lower() in stop_words]
                 sentence = nltk.pos_tag(sentence)
                 sentence = [wnl.lemmatize(word, self.get_wordnet_pos(pos)) for word, pos in sentence]
                 text.append(sentence)
@@ -168,7 +173,6 @@ class Formatter:
 
 if __name__ == "__main__":
     formatter = Formatter()
-    print(len(formatter.data["British"]))
-    #print(formatter.remove_citings("[250] Independence had been delayedefore it had an emperor.[8][9][10][11] T"))
+    print(formatter.remove_citings("[e] Independence had been delayed before it had an emperor.[8][9][10][11] T"))
                 
 
