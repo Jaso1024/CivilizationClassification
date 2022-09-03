@@ -1,4 +1,3 @@
 # EmpireClassification
-Ensemble Learning to classify text into one of four empires.
+LSTM and other Machine learning algorithms used for text classification (92% accuracy).
 
-Empires: Roman, Ottoman, Spanish, and Russian.
